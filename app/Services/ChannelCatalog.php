@@ -8,8 +8,10 @@ class ChannelCatalog
 {
     public function channels(): array
     {
-        return Cache::remember('iptv.channels.v2', now()->addHour(), function () {
-            $path = public_path('index.m3u');
+        $path = public_path('index.m3u');
+        $mtime = is_file($path) ? filemtime($path) : 0;
+
+        return Cache::remember('iptv.channels.v3.'.$mtime, now()->addHour(), function () use ($path) {
             if (! is_file($path)) {
                 return [];
             }
@@ -49,12 +51,14 @@ class ChannelCatalog
 
     public function forCountry(?string $code, ?string $query = null): array
     {
-        $code = strtoupper((string) $code);
+        $code = strtoupper(trim((string) $code));
         $query = strtolower(trim((string) $query));
 
         return array_values(array_filter($this->channels(), function ($channel) use ($code, $query) {
-            if ($code !== '' && strtoupper((string) $channel['country_code']) !== $code) {
-                return false;
+            if ($code !== '' && $code !== 'ALL') {
+                if (strtoupper((string) ($channel['country_code'] ?? '')) !== $code) {
+                    return false;
+                }
             }
             if ($query !== '' && ! str_contains(strtolower($channel['name']), $query)) {
                 return false;
@@ -81,6 +85,11 @@ class ChannelCatalog
         ];
     }
 
+    public function hasPlaylist(): bool
+    {
+        return is_file(public_path('index.m3u')) && filesize(public_path('index.m3u')) > 0;
+    }
+
     public function parse(string $m3uText): array
     {
         $meta = $this->metadata();
@@ -93,8 +102,8 @@ class ChannelCatalog
                 continue;
             }
 
-            $url = trim($lines[$i + 1] ?? '');
-            if (! preg_match('#^https?://#i', $url)) {
+            $url = $this->nextUrl($lines, $i + 1);
+            if ($url === null) {
                 continue;
             }
 
@@ -103,8 +112,7 @@ class ChannelCatalog
                 continue;
             }
 
-            $countryCode = $this->attr($line, 'tvg-country');
-            $countryCode = $countryCode ? strtolower(explode(';', $countryCode)[0]) : null;
+            $countryCode = $this->countryFromLine($line);
             $info = $countryCode ? ($meta[strtoupper($countryCode)] ?? []) : [];
 
             $channels[] = [
@@ -113,13 +121,55 @@ class ChannelCatalog
                 'logo' => $this->attr($line, 'tvg-logo'),
                 'group' => $this->attr($line, 'group-title'),
                 'country_code' => $countryCode,
-                'country_name' => $info['country'] ?? 'Unknown',
+                'country_name' => $info['country'] ?? ($countryCode ? strtoupper($countryCode) : 'Unknown'),
                 'flag' => $info['flag'] ?? '🏳️',
                 'kind' => str_contains(strtolower($url), '.m3u8') ? 'hls' : (preg_match('/\.ts(\?|$)/i', $url) ? 'ts' : 'file'),
             ];
         }
 
         return $channels;
+    }
+
+    private function nextUrl(array $lines, int $start): ?string
+    {
+        for ($j = $start; $j < count($lines); $j++) {
+            $candidate = trim($lines[$j]);
+            if ($candidate === '') {
+                continue;
+            }
+            if (str_starts_with($candidate, '#EXTINF:')) {
+                return null;
+            }
+            if (str_starts_with($candidate, '#')) {
+                continue;
+            }
+            if (preg_match('#^https?://#i', $candidate)) {
+                return $candidate;
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    private function countryFromLine(string $line): ?string
+    {
+        $fromAttr = $this->attr($line, 'tvg-country');
+        if ($fromAttr) {
+            $code = strtolower(explode(';', $fromAttr)[0]);
+            if (preg_match('/^[a-z]{2}$/', $code)) {
+                return $code;
+            }
+        }
+
+        // iptv-org style: tvg-id="Something.tz@SD"
+        $id = (string) $this->attr($line, 'tvg-id');
+        if (preg_match('/\.([a-z]{2})(?:@|$)/i', $id, $match)) {
+            return strtolower($match[1]);
+        }
+
+        return null;
     }
 
     private function metadata(): array

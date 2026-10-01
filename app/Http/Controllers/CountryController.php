@@ -26,6 +26,8 @@ class CountryController extends Controller
         return view('channels', [
             'countries' => $countries,
             'q' => $q,
+            'has_playlist' => $this->catalog->hasPlaylist(),
+            'total_channels' => count($this->catalog->channels()),
         ]);
     }
 
@@ -42,8 +44,13 @@ class CountryController extends Controller
             'page' => $result['page'],
             'pages' => $result['pages'],
             'total' => $result['total'],
-            'country' => $meta ?? ['code' => strtoupper($country_code), 'name' => strtoupper($country_code), 'flag' => '🏳️'],
+            'country' => $meta ?? [
+                'code' => strtoupper($country_code),
+                'name' => strtoupper($country_code) === 'ALL' ? 'All channels' : strtoupper($country_code),
+                'flag' => '🏳️',
+            ],
             'q' => $q,
+            'has_playlist' => $this->catalog->hasPlaylist(),
         ]);
     }
 
