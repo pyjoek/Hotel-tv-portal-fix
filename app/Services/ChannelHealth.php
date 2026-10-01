@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Http;
 
 class ChannelHealth
 {
+    private ?array $urls = null;
+
     public function path(): string
     {
         return storage_path('app/channel_health.json');
@@ -14,19 +16,24 @@ class ChannelHealth
 
     public function all(): array
     {
+        if ($this->urls !== null) {
+            return $this->urls;
+        }
+
         $path = $this->path();
         if (! is_file($path)) {
-            return [];
+            return $this->urls = [];
         }
 
         $data = json_decode((string) file_get_contents($path), true);
+        $this->urls = is_array($data['urls'] ?? null) ? $data['urls'] : [];
 
-        return is_array($data['urls'] ?? null) ? $data['urls'] : [];
+        return $this->urls;
     }
 
     public function hasData(): bool
     {
-        return is_file($this->path()) && count($this->all()) > 0;
+        return count($this->all()) > 0;
     }
 
     public function isWorking(string $url): bool
@@ -47,6 +54,8 @@ class ChannelHealth
             'updated_at' => now()->toIso8601String(),
             'urls' => $urls,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        $this->urls = $urls;
     }
 
     public function probeOne(string $url): bool
@@ -59,7 +68,6 @@ class ChannelHealth
                 'allow_redirects' => true,
                 'timeout' => 6,
                 'connect_timeout' => 4,
-                'stream' => true,
             ])->get($url);
 
             if (! $response->successful()) {
@@ -77,7 +85,6 @@ class ChannelHealth
                 return strlen($body) > 0;
             }
 
-            // Some CDNs omit content-type but still return bytes.
             return strlen($body) > 32;
         } catch (\Throwable $e) {
             return false;
@@ -93,9 +100,8 @@ class ChannelHealth
         $existing = $this->all();
         $ok = 0;
         $fail = 0;
-        $chunks = array_chunk($channels, max(1, $concurrency));
 
-        foreach ($chunks as $chunk) {
+        foreach (array_chunk($channels, max(1, $concurrency)) as $chunk) {
             $responses = Http::pool(function ($pool) use ($chunk) {
                 foreach ($chunk as $i => $channel) {
                     $pool->as((string) $i)->withHeaders([
@@ -115,7 +121,7 @@ class ChannelHealth
                 $good = false;
 
                 try {
-                    if ($response && ! $response instanceof \Throwable && $response->successful()) {
+                    if ($response && ! $response instanceof \Throwable && method_exists($response, 'successful') && $response->successful()) {
                         $type = strtolower($response->header('Content-Type') ?? '');
                         $body = substr((string) $response->body(), 0, 2048);
                         $good = str_starts_with(ltrim($body), '#EXTM3U')
