@@ -14,7 +14,8 @@ class CountryController extends Controller
 
     public function countries(Request $request)
     {
-        $countries = $this->catalog->countries();
+        $onlyWorking = ! $request->boolean('all');
+        $countries = $this->catalog->countries($onlyWorking);
         $q = trim((string) $request->query('q', ''));
 
         if ($q !== '') {
@@ -27,17 +28,20 @@ class CountryController extends Controller
             'countries' => $countries,
             'q' => $q,
             'has_playlist' => $this->catalog->hasPlaylist(),
-            'total_channels' => count($this->catalog->channels()),
+            'total_channels' => count($this->catalog->channels($onlyWorking)),
+            'health_ready' => $this->catalog->healthReady(),
+            'only_working' => $onlyWorking,
         ]);
     }
 
     public function showChannels(Request $request, string $country_code)
     {
+        $onlyWorking = ! $request->boolean('all');
         $q = trim((string) $request->query('q', ''));
         $page = (int) $request->query('page', 1);
-        $filtered = $this->catalog->forCountry($country_code, $q);
+        $filtered = $this->catalog->forCountry($country_code, $q, $onlyWorking);
         $result = $this->catalog->page($filtered, $page);
-        $meta = collect($this->catalog->countries())->firstWhere('code', strtoupper($country_code));
+        $meta = collect($this->catalog->countries($onlyWorking))->firstWhere('code', strtoupper($country_code));
 
         return view('show', [
             'channels' => $result['data'],
@@ -51,6 +55,8 @@ class CountryController extends Controller
             ],
             'q' => $q,
             'has_playlist' => $this->catalog->hasPlaylist(),
+            'health_ready' => $this->catalog->healthReady(),
+            'only_working' => $onlyWorking,
         ]);
     }
 

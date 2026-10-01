@@ -3,10 +3,10 @@
 <h1>Countries</h1>
 @if (!($has_playlist ?? true))
     <p class="empty">Missing public/index.m3u. Copy it from the original Hotel-tv-portal repo.</p>
-@elseif (($total_channels ?? 0) === 0)
-    <p class="empty">Playlist found but no channels parsed. Check public/index.m3u.</p>
+@elseif (!($health_ready ?? false))
+    <p class="empty">Showing all channels until you probe. Run: <code>php artisan channels:probe --country=TZ</code></p>
 @else
-    <p class="subtitle">{{ $total_channels }} channels · {{ count($countries) }} countries</p>
+    <p class="subtitle">Working only · {{ $total_channels }} channels · {{ count($countries) }} countries</p>
 @endif
 <form method="GET" action="{{ route('channels') }}" class="search-form">
     <input type="text" name="q" value="{{ $q }}" placeholder="Search country" class="search-input focusable" tabindex="0">
@@ -26,7 +26,7 @@
         </a>
     @empty
         @if ($has_playlist ?? true)
-            <p class="empty">No countries matched.</p>
+            <p class="empty">No working countries yet. Probe streams first.</p>
         @endif
     @endforelse
 </div>

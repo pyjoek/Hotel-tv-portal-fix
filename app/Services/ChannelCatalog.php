@@ -6,26 +6,36 @@ use Illuminate\Support\Facades\Cache;
 
 class ChannelCatalog
 {
-    public function channels(): array
+    public function __construct(private ChannelHealth $health)
+    {
+    }
+
+    public function channels(bool $onlyWorking = true): array
     {
         $path = public_path('index.m3u');
         $mtime = is_file($path) ? filemtime($path) : 0;
 
-        return Cache::remember('iptv.channels.v3.'.$mtime, now()->addHour(), function () use ($path) {
+        $all = Cache::remember('iptv.channels.v3.'.$mtime, now()->addHour(), function () use ($path) {
             if (! is_file($path)) {
                 return [];
             }
 
             return $this->parse((string) file_get_contents($path));
         });
+
+        if (! $onlyWorking || ! $this->health->hasData()) {
+            return $all;
+        }
+
+        return array_values(array_filter($all, fn ($channel) => $this->health->isWorking($channel['url'])));
     }
 
-    public function countries(): array
+    public function countries(bool $onlyWorking = true): array
     {
         $meta = $this->metadata();
         $counts = [];
 
-        foreach ($this->channels() as $channel) {
+        foreach ($this->channels($onlyWorking) as $channel) {
             $code = strtoupper((string) ($channel['country_code'] ?? ''));
             if ($code === '') {
                 continue;
@@ -49,12 +59,12 @@ class ChannelCatalog
         return $countries;
     }
 
-    public function forCountry(?string $code, ?string $query = null): array
+    public function forCountry(?string $code, ?string $query = null, bool $onlyWorking = true): array
     {
         $code = strtoupper(trim((string) $code));
         $query = strtolower(trim((string) $query));
 
-        return array_values(array_filter($this->channels(), function ($channel) use ($code, $query) {
+        return array_values(array_filter($this->channels($onlyWorking), function ($channel) use ($code, $query) {
             if ($code !== '' && $code !== 'ALL') {
                 if (strtoupper((string) ($channel['country_code'] ?? '')) !== $code) {
                     return false;
@@ -88,6 +98,11 @@ class ChannelCatalog
     public function hasPlaylist(): bool
     {
         return is_file(public_path('index.m3u')) && filesize(public_path('index.m3u')) > 0;
+    }
+
+    public function healthReady(): bool
+    {
+        return $this->health->hasData();
     }
 
     public function parse(string $m3uText): array
@@ -163,7 +178,6 @@ class ChannelCatalog
             }
         }
 
-        // iptv-org style: tvg-id="Something.tz@SD"
         $id = (string) $this->attr($line, 'tvg-id');
         if (preg_match('/\.([a-z]{2})(?:@|$)/i', $id, $match)) {
             return strtolower($match[1]);
