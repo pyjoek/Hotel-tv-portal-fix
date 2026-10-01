@@ -1,1 +1,92 @@
-PLACEHOLDER
+{
+  "TZ": {
+    "country": "Tanzania",
+    "capital": "Dodoma",
+    "timeZone": "Africa/Dar_es_Salaam",
+    "hasChannels": true
+  },
+  "KE": {
+    "country": "Kenya",
+    "capital": "Nairobi",
+    "timeZone": "Africa/Nairobi",
+    "hasChannels": true
+  },
+  "UG": {
+    "country": "Uganda",
+    "capital": "Kampala",
+    "timeZone": "Africa/Kampala",
+    "hasChannels": true
+  },
+  "RW": {
+    "country": "Rwanda",
+    "capital": "Kigali",
+    "timeZone": "Africa/Kigali",
+    "hasChannels": true
+  },
+  "ZA": {
+    "country": "South Africa",
+    "capital": "Pretoria",
+    "timeZone": "Africa/Johannesburg",
+    "hasChannels": true
+  },
+  "NG": {
+    "country": "Nigeria",
+    "capital": "Abuja",
+    "timeZone": "Africa/Lagos",
+    "hasChannels": true
+  },
+  "GH": {
+    "country": "Ghana",
+    "capital": "Accra",
+    "timeZone": "Africa/Accra",
+    "hasChannels": true
+  },
+  "EG": {
+    "country": "Egypt",
+    "capital": "Cairo",
+    "timeZone": "Africa/Cairo",
+    "hasChannels": true
+  },
+  "US": {
+    "country": "United States",
+    "capital": "Washington, D.C.",
+    "timeZone": "America/New_York",
+    "hasChannels": true
+  },
+  "GB": {
+    "country": "United Kingdom",
+    "capital": "London",
+    "timeZone": "Europe/London",
+    "hasChannels": true
+  },
+  "FR": {
+    "country": "France",
+    "capital": "Paris",
+    "timeZone": "Europe/Paris",
+    "hasChannels": true
+  },
+  "DE": {
+    "country": "Germany",
+    "capital": "Berlin",
+    "timeZone": "Europe/Berlin",
+    "hasChannels": true
+  },
+  "IN": {
+    "country": "India",
+    "capital": "New Delhi",
+    "timeZone": "Asia/Kolkata",
+    "hasChannels": true
+  },
+  "AE": {
+    "country": "United Arab Emirates",
+    "capital": "Abu Dhabi",
+    "timeZone": "Asia/Dubai",
+    "hasChannels": true
+  },
+  "CN": {
+    "country": "China",
+    "capital": "Beijing",
+    "timeZone": "Asia/Shanghai",
+    "hasChannels": true
+  }
+}
