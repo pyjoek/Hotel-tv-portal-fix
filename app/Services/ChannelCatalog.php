@@ -14,13 +14,13 @@ class ChannelCatalog
                 return [];
             }
 
-            return $this->parse(file_get_contents($path));
+            return $this->parse((string) file_get_contents($path));
         });
     }
 
     public function countries(): array
     {
-        $meta = json_decode(file_get_contents(public_path('countries_metadata.json')), true) ?: [];
+        $meta = $this->metadata();
         $counts = [];
 
         foreach ($this->channels() as $channel) {
@@ -83,7 +83,7 @@ class ChannelCatalog
 
     public function parse(string $m3uText): array
     {
-        $meta = json_decode(@file_get_contents(public_path('countries_metadata.json')), true) ?: [];
+        $meta = $this->metadata();
         $lines = preg_split("/\r\n|\n|\r/", $m3uText);
         $channels = [];
 
@@ -120,6 +120,16 @@ class ChannelCatalog
         }
 
         return $channels;
+    }
+
+    private function metadata(): array
+    {
+        $path = public_path('countries_metadata.json');
+        if (! is_file($path)) {
+            return [];
+        }
+
+        return json_decode((string) file_get_contents($path), true) ?: [];
     }
 
     private function blocked(string $name): bool
